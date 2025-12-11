@@ -4,6 +4,32 @@ import numpy as np
 import plotly.express as px
 from datetime import datetime
 
+import gspread
+from google.oauth2.service_account import Credentials
+import json
+
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+def load_from_gsheet():
+    # Read credentials from Streamlit Secrets
+    service_account_info = st.secrets["GOOGLE_SERVICE_ACCOUNT"]
+    creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+
+    # Connect to Google Sheets
+    gc = gspread.authorize(creds)
+
+    # Load your spreadsheet (REPLACE with your actual Sheet ID!)
+    SPREADSHEET_ID = "13c6B7t3Enm9l1JVM1rU0fvUg1Q9p9CGGUJJhxVD5GKk"
+    sh = gc.open_by_key(SPREADSHEET_ID)
+
+    # Read first worksheet
+    ws = sh.sheet1
+    data = ws.get_all_records()
+
+    # Return as DataFrame
+    return pd.DataFrame(data)
+
+
 # -------------------------------------------------------------
 # ---------------- SMART TIME PARSER (AUTO FIX) ---------------
 # -------------------------------------------------------------
@@ -106,12 +132,7 @@ def preprocess_data(df):
 # ------------------------- LOAD DATA --------------------------
 # -------------------------------------------------------------
 
-@st.cache_data
-def load_latest_data():
-    """
-    Loads CSV updated by the Google Sheets scheduler.
-    """
-    return pd.read_csv("latest_schedule.csv")
+
 
 
 # -------------------------------------------------------------
@@ -123,7 +144,8 @@ def main():
     st.title("🎓 KIMEP Classroom Occupancy Dashboard")
 
     # --- Load data ---
-    raw_df = load_latest_data()
+    raw_df = load_from_gsheet()
+
     df_valid, df_errors = preprocess_data(raw_df)
 
     st.success("Data loaded successfully from latest_schedule.csv")
@@ -235,3 +257,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
